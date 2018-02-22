@@ -7,10 +7,10 @@ use_frameworks!
 abstract_target 'App' do
     pod 'PusherSwift'
 
-    target 'Pusher'
+    target 'Pusha'
 
     # Test targets
-    target 'PusherTests' do
+    target 'PushaTests' do
         inherit! :search_paths
     end
 end

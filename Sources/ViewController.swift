@@ -8,18 +8,18 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+final class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+
+        let client = PusherClient(
+            host: Environment.variable(forKey: .pusherCluster),
+            key: Environment.variable(forKey: .pusherKey)
+        )
+
+        let channel = client.subscribe(toChannelIdentifier: .playground)
+        client.bindEventIdentifier(.messageReceived, toChannel: channel)
     }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-
-
 }
 

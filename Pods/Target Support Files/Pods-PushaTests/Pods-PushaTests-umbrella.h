@@ -11,6 +11,6 @@
 #endif
 
 
-FOUNDATION_EXPORT double Pods_App_PusherVersionNumber;
-FOUNDATION_EXPORT const unsigned char Pods_App_PusherVersionString[];
+FOUNDATION_EXPORT double Pods_PushaTestsVersionNumber;
+FOUNDATION_EXPORT const unsigned char Pods_PushaTestsVersionString[];
 

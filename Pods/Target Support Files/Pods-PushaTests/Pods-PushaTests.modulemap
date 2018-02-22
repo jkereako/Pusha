@@ -1,0 +1,6 @@
+framework module Pods_PushaTests {
+  umbrella header "Pods-PushaTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

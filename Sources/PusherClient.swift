@@ -10,30 +10,54 @@ import PusherSwift
 
 final class PusherClient {
     private let pusher: Pusher
-
-    private var channel: PusherChannel?
+    private var subscribedChannels: [PusherSwift.PusherChannel]
     
     init(host: String, key: String) {
         let options = PusherClientOptions(
             host: .cluster(host)
         )
+
+        print(key)
+        print(host)
+
+        subscribedChannels = [PusherSwift.PusherChannel]()
         pusher = Pusher(key: key, options: options)
         pusher.connect()
         pusher.delegate = self
     }
 
-    func subscribe(toChannel channelName: String) {
-        // subscribe to channel and bind to event
-        channel = pusher.subscribe(channelName) 
-    }
-
-    func channel(bindEventName eventName: String) {
-//        channel?.bind(eventName: eventName, callback: <#T##(Any?) -> Void#>)
-    }
-
-    func unsubscribe() {
+    deinit {
         pusher.disconnect()
         pusher.unsubscribeAll()
+    }
+
+    func subscribe(toChannelIdentifier identifier: PusherChannelIdentifier) -> PusherSwift.PusherChannel
+    {
+        let channel = pusher.subscribe(identifier.rawValue)
+
+        subscribedChannels.append(channel)
+
+        return channel
+    }
+
+    func bindEventIdentifier(_ event: PusherEventIdentifier,
+                             toChannel channel: PusherSwift.PusherChannel) {
+        assert(subscribedChannels.contains(channel), "Not subscribed to channel \"\(channel.name)\".")
+
+        channel.bind(eventName: event.rawValue) { something in
+            print("Message received")
+        }
+    }
+
+    func unsubscribe(fromChannel channel: PusherSwift.PusherChannel? = nil) {
+        guard let aChannel = channel, let index = subscribedChannels.index(of: aChannel) else {
+            pusher.disconnect()
+            pusher.unsubscribeAll()
+            return
+        }
+
+        pusher.unsubscribe(aChannel.name)
+        subscribedChannels.remove(at: index)
     }
 }
 
