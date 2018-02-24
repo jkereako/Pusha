@@ -9,5 +9,5 @@
 import Foundation
 
 enum PusherChannelIdentifier: String {
-    case playground = "Playground"
+    case playground = "my-channel"
 }

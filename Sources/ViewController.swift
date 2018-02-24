@@ -9,17 +9,22 @@
 import UIKit
 
 final class ViewController: UIViewController {
+    // Hold a strong reference to the client so that it stays in memory
+    private var client: PusherClient!
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let client = PusherClient(
+        client = PusherClient(
             host: Environment.variable(forKey: .pusherCluster),
             key: Environment.variable(forKey: .pusherKey)
         )
 
-        let channel = client.subscribe(toChannelIdentifier: .playground)
-        client.bindEventIdentifier(.messageReceived, toChannel: channel)
+        // REVIEW: Find a better way to couple events with channels.
+        client.subscribe(toChannelIdentifier: .playground)
+        client.bindEventIdentifier(.messageReceived, toChannelIdentifier: .playground) { response in
+            print(response)
+        }
     }
 }
 

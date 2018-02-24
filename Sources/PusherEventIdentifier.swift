@@ -9,5 +9,5 @@
 import Foundation
 
 enum PusherEventIdentifier: String {
-    case messageReceived = "MessageReceived"
+    case messageReceived = "my-event"
 }

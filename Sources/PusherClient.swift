@@ -9,18 +9,23 @@
 import PusherSwift
 
 final class PusherClient {
+    var subscribedChannelIdentifiers: [PusherChannelIdentifier] {
+        return Array(subscribedChannels.keys)
+    }
     private let pusher: Pusher
-    private var subscribedChannels: [PusherSwift.PusherChannel]
+    private var subscribedChannels: [PusherChannelIdentifier: PusherSwift.PusherChannel]
     
     init(host: String, key: String) {
         let options = PusherClientOptions(
             host: .cluster(host)
         )
 
-        print(key)
-        print(host)
+        #if DEBUG
+            print(key)
+            print(host)
+        #endif
 
-        subscribedChannels = [PusherSwift.PusherChannel]()
+        subscribedChannels = [PusherChannelIdentifier: PusherSwift.PusherChannel]()
         pusher = Pusher(key: key, options: options)
         pusher.connect()
         pusher.delegate = self
@@ -31,46 +36,47 @@ final class PusherClient {
         pusher.unsubscribeAll()
     }
 
-    func subscribe(toChannelIdentifier identifier: PusherChannelIdentifier) -> PusherSwift.PusherChannel
-    {
+    func subscribe(toChannelIdentifier identifier: PusherChannelIdentifier) {
+        assert(
+            !subscribedChannelIdentifiers.contains(identifier),
+            "Already subscribed to channel \(identifier.rawValue)"
+        )
+
         let channel = pusher.subscribe(identifier.rawValue)
 
-        subscribedChannels.append(channel)
-
-        return channel
+        subscribedChannels[identifier] = channel
     }
 
-    func bindEventIdentifier(_ event: PusherEventIdentifier,
-                             toChannel channel: PusherSwift.PusherChannel) {
-        assert(subscribedChannels.contains(channel), "Not subscribed to channel \"\(channel.name)\".")
+    func bindEventIdentifier(_ eventIdentifier: PusherEventIdentifier,
+                             toChannelIdentifier channelIdentifier: PusherChannelIdentifier,
+                             completionHandler: @escaping ([String: Any]) -> Void) {
 
-        channel.bind(eventName: event.rawValue) { something in
-            print("Message received")
+        guard let channel = subscribedChannels[channelIdentifier] else {
+            assertionFailure("Not subscribed to channel \(channelIdentifier.rawValue)")
+            return
+        }
+
+        channel.bind(eventName: eventIdentifier.rawValue) { response in
+            guard let jsonDictionary = response as? [String: Any] else {
+                assertionFailure("Expected a JSON dictionary")
+                return
+            }
+
+            completionHandler(jsonDictionary)
         }
     }
 
-    func unsubscribe(fromChannel channel: PusherSwift.PusherChannel? = nil) {
-        guard let aChannel = channel, let index = subscribedChannels.index(of: aChannel) else {
+    func unsubscribe(fromChannelIdentifier channelIdentifier: PusherChannelIdentifier? = nil) {
+        guard let identifier = channelIdentifier, let channel = subscribedChannels[identifier] else {
             pusher.disconnect()
             pusher.unsubscribeAll()
             return
         }
 
-        pusher.unsubscribe(aChannel.name)
-        subscribedChannels.remove(at: index)
+        pusher.unsubscribe(channel.name)
+        subscribedChannels[identifier] = nil
     }
 }
-
-
-//@objc optional func registeredForPushNotifications(clientId: String)
-//@objc optional func failedToRegisterForPushNotifications(response: URLResponse, responseBody: String?)
-//@objc optional func subscribedToInterest(name: String)
-//@objc optional func subscribedToInterests(interests: Array<String>)
-//@objc optional func unsubscribedFromInterest(name: String)
-//
-//@objc optional func changedConnectionState(from old: ConnectionState, to new: ConnectionState)
-//@objc optional func subscribedToChannel(name: String)
-//@objc optional func failedToSubscribeToChannel(name: String, response: URLResponse?, data: String?, error: NSError?)
 
 // MARK: - Pusher delegate
 extension PusherClient: PusherDelegate {
