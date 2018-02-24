@@ -20,7 +20,9 @@ final class ViewController: UIViewController {
             key: Environment.variable(forKey: .pusherKey)
         )
 
-        // REVIEW: Find a better way to couple events with channels.
+        // Conceptually, channels and events are tightly coupled. That coupling is reflected in
+        // `listenForEvent(:, onChannel:)` by simultaneously subscribing to the channel and binding
+        // the closure to the event on that channel.
         client.listenForEvent(.messageReceived, onChannel: .playground) { response in
             print(response)
         }
