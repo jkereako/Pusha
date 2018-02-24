@@ -13,19 +13,17 @@ final class PusherClient {
         return Array(subscribedChannels.keys)
     }
     private let pusher: Pusher
-    private var subscribedChannels: [PusherChannelIdentifier: PusherSwift.PusherChannel]
+    private var subscribedChannels: [PusherChannelIdentifier: PusherChannel]
     
     init(host: String, key: String) {
-        let options = PusherClientOptions(
-            host: .cluster(host)
-        )
+        let options = PusherClientOptions(host: .cluster(host))
 
         #if DEBUG
             print(key)
             print(host)
         #endif
 
-        subscribedChannels = [PusherChannelIdentifier: PusherSwift.PusherChannel]()
+        subscribedChannels = [PusherChannelIdentifier: PusherChannel]()
         pusher = Pusher(key: key, options: options)
         pusher.connect()
         pusher.delegate = self
@@ -36,21 +34,23 @@ final class PusherClient {
         pusher.unsubscribeAll()
     }
 
-    func subscribe(toChannelIdentifier identifier: PusherChannelIdentifier) {
-        assert(
-            !subscribedChannelIdentifiers.contains(identifier),
-            "Already subscribed to channel \(identifier.rawValue)"
-        )
+    /// Invokes a completion handler when an event on a channel is triggered.
+    ///
+    /// - Parameters:
+    ///   - eventIdentifier: The name of the event to listen for
+    ///   - channelIdentifier: The name of the channel
+    ///   - eventHandler: The closure to execute when the event is triggered
+    func listenForEvent(_ eventIdentifier: PusherEventIdentifier,
+                        onChannel channelIdentifier: PusherChannelIdentifier,
+                        eventHandler: @escaping ([String: Any]) -> Void) {
 
-        let channel = pusher.subscribe(identifier.rawValue)
+        // It's likely that a single channel will have multiple events. Make sure we don't
+        // over-subscribe to a channel.
+        if !subscribedChannelIdentifiers.contains(channelIdentifier) {
+            subscribe(toChannelIdentifier: channelIdentifier)
+        }
 
-        subscribedChannels[identifier] = channel
-    }
-
-    func bindEventIdentifier(_ eventIdentifier: PusherEventIdentifier,
-                             toChannelIdentifier channelIdentifier: PusherChannelIdentifier,
-                             completionHandler: @escaping ([String: Any]) -> Void) {
-
+        // I can't think of a better way to safely unwrap this optional.
         guard let channel = subscribedChannels[channelIdentifier] else {
             assertionFailure("Not subscribed to channel \(channelIdentifier.rawValue)")
             return
@@ -62,11 +62,11 @@ final class PusherClient {
                 return
             }
 
-            completionHandler(jsonDictionary)
+            eventHandler(jsonDictionary)
         }
     }
 
-    func unsubscribe(fromChannelIdentifier channelIdentifier: PusherChannelIdentifier? = nil) {
+    func unsubscribe(fromChannel channelIdentifier: PusherChannelIdentifier? = nil) {
         guard let identifier = channelIdentifier, let channel = subscribedChannels[identifier] else {
             pusher.disconnect()
             pusher.unsubscribeAll()
@@ -83,5 +83,19 @@ extension PusherClient: PusherDelegate {
     func failedToSubscribeToChannel(name: String, response: URLResponse?, data: String?,
                                     error: NSError?) {
         print("Failed to subscribe to channel")
+    }
+}
+
+// MARK: - Private helper methods
+private extension PusherClient {
+    func subscribe(toChannelIdentifier identifier: PusherChannelIdentifier) {
+        assert(
+            !subscribedChannelIdentifiers.contains(identifier),
+            "Already subscribed to channel \(identifier.rawValue)"
+        )
+
+        let channel = pusher.subscribe(identifier.rawValue)
+
+        subscribedChannels[identifier] = channel
     }
 }

@@ -21,8 +21,7 @@ final class ViewController: UIViewController {
         )
 
         // REVIEW: Find a better way to couple events with channels.
-        client.subscribe(toChannelIdentifier: .playground)
-        client.bindEventIdentifier(.messageReceived, toChannelIdentifier: .playground) { response in
+        client.listenForEvent(.messageReceived, onChannel: .playground) { response in
             print(response)
         }
     }
